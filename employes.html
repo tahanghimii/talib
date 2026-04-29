@@ -279,7 +279,7 @@
 
     <!-- ═══════════ BULK EMPLOYEE MODAL ═══════════ -->
     <div class="modal-overlay" id="bulkModal">
-      <div class="modal-box" style="max-width:700px;">
+      <div class="modal-box" style="max-width:900px;">
 
         <div class="modal-header">
           <div class="modal-header-title">Importer plusieurs employés</div>
@@ -289,8 +289,8 @@
 
         <div class="modal-body">
           <div style="background:var(--gray-50); padding:12px 16px; border-radius:8px; margin-bottom:16px; font-size:13px; color:var(--gray-600); border-left:4px solid var(--brand-primary);">
-            <strong>Format Excel attendu :</strong> 3 colonnes dans cet ordre :<br>
-            <code style="display:block; margin-top:4px; color:var(--brand-primary); font-weight:600;">Nom complet | Date d'embauche (AAAA-MM-JJ) | Poste</code>
+            <strong>Format Excel attendu :</strong> 8 colonnes dans cet ordre (aucun champ n'est obligatoire) :<br>
+            <code style="display:block; margin-top:4px; color:var(--brand-primary); font-weight:600;">Nom complet | Date de naissance | Poste | Date d'embauche | Adresse | Contrat | CIN | N° SS</code>
           </div>
 
           <div class="form-group" style="margin-bottom:16px;">
@@ -301,7 +301,7 @@
           <div class="form-group">
             <label class="form-label" for="bulkPasteArea">Ou collez directement depuis Excel</label>
             <textarea id="bulkPasteArea" class="form-control" rows="8" placeholder="Exemple de ligne collée :
-Youssef Benali	2022-01-01	Développeur" style="font-family:monospace; font-size:13px;"></textarea>
+Youssef Benali	1990-05-15	Développeur	2022-01-01	12 Rue Mohammed V	CDI	AB123456	00233173900024" style="font-family:monospace; font-size:13px;"></textarea>
           </div>
 
           <div id="bulkPreview" style="margin-top:20px; display:none;">
@@ -313,8 +313,13 @@ Youssef Benali	2022-01-01	Développeur" style="font-family:monospace; font-size:
                 <thead>
                   <tr>
                     <th>Nom</th>
-                    <th>Embauche</th>
+                    <th>Naissance</th>
                     <th>Poste</th>
+                    <th>Embauche</th>
+                    <th>Adresse</th>
+                    <th>Contrat</th>
+                    <th>CIN</th>
+                    <th>N° SS</th>
                   </tr>
                 </thead>
                 <tbody id="bulkPreviewBody"></tbody>
@@ -705,11 +710,18 @@ Youssef Benali	2022-01-01	Développeur" style="font-family:monospace; font-size:
           else if (line.includes(",") && !line.includes("\t")) delimiter = ",";
 
           const parts = line.split(delimiter).map(p => p.trim().replace(/^"|"$/g, ''));
-          if (parts[0]) { 
+          if (parts.some(p => p.trim() !== "")) { 
+            const bDate = formatExcelDate(parts[1]);
+            const hDate = formatExcelDate(parts[3]);
             parsedBulkEmployees.push({
               Name: parts[0] || "",
-              HireDate: parts[1] || "",
-              Position: parts[2] || ""
+              BirthDate: bDate,
+              Position: parts[2] || "",
+              HireDate: hDate,
+              Address: parts[4] || "",
+              "Contract type": parts[5] || "",
+              "National ID": parts[6] || "",
+              "Social security number": parts[7] || ""
             });
           }
         });
@@ -732,13 +744,19 @@ Youssef Benali	2022-01-01	Développeur" style="font-family:monospace; font-size:
           
           rows.forEach((row, index) => {
             if (index === 0 && isHeaderRow(row)) return; 
-            if (row[0]) {
-              const hDate = formatExcelDate(row[1]);
+            if (row.some(cell => cell !== null && cell !== undefined && String(cell).trim() !== "")) {
+              const bDate = formatExcelDate(row[1]);
+              const hDate = formatExcelDate(row[3]);
               
               parsedBulkEmployees.push({
                 Name: String(row[0] || "").trim(),
+                BirthDate: bDate,
+                Position: String(row[2] || "").trim(),
                 HireDate: hDate,
-                Position: String(row[2] || "").trim()
+                Address: String(row[4] || "").trim(),
+                "Contract type": String(row[5] || "").trim(),
+                "National ID": String(row[6] || "").trim(),
+                "Social security number": String(row[7] || "").trim()
               });
             }
           });
@@ -783,8 +801,13 @@ Youssef Benali	2022-01-01	Développeur" style="font-family:monospace; font-size:
         tbody.innerHTML = parsedBulkEmployees.map(emp => `
           <tr>
             <td><strong>${emp.Name || "—"}</strong></td>
-            <td>${emp.HireDate || "—"}</td>
+            <td>${emp.BirthDate || "—"}</td>
             <td>${emp.Position || "—"}</td>
+            <td>${emp.HireDate || "—"}</td>
+            <td>${emp.Address || "—"}</td>
+            <td>${emp["Contract type"] || "—"}</td>
+            <td>${emp["National ID"] || "—"}</td>
+            <td>${emp["Social security number"] || "—"}</td>
           </tr>
         `).join("");
 
