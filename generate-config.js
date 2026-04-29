@@ -4,12 +4,27 @@
 
 const fs = require("fs");
 
-const key    = process.env.AIRTABLE_API_KEY;
-const baseId = process.env.AIRTABLE_BASE_ID;
+let key    = process.env.AIRTABLE_API_KEY;
+let baseId = process.env.AIRTABLE_BASE_ID;
+
+// Fallback: Try to load from local .env file
+if ((!key || !baseId) && fs.existsSync(".env")) {
+  const envContent = fs.readFileSync(".env", "utf8");
+  envContent.split("\n").forEach(line => {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) return;
+    const [k, ...v] = trimmed.split("=");
+    if (k && v.length) {
+      const val = v.join("=").trim().replace(/^['"]|['"]$/g, '');
+      if (k.trim() === "AIRTABLE_API_KEY") key = val;
+      if (k.trim() === "AIRTABLE_BASE_ID") baseId = val;
+    }
+  });
+}
 
 if (!key || !baseId) {
   console.error("❌  Missing env vars: AIRTABLE_API_KEY and/or AIRTABLE_BASE_ID");
-  console.error("   Set them in Vercel Dashboard → Project → Settings → Environment Variables");
+  console.error("   Set them in Vercel Dashboard or create a .env file locally.");
   process.exit(1);
 }
 
@@ -23,3 +38,4 @@ window.DKM_CONFIG = {
 
 fs.writeFileSync("config.js", content, "utf8");
 console.log("✅  config.js generated successfully");
+
